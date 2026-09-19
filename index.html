@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mod Roulette — случайный мод с Modrinth</title>
+<link rel="icon" type="image/png" href="siteicon-green.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f9f6;
+    --surface: #ffffff;
+    --surface-alt: #eaf5ee;
+    --border: #d6e6dc;
+    --text: #14201a;
+    --text-muted: #5c7267;
+    --accent: #12b76a;
+    --accent-strong: #0e9c5a;
+    --accent-soft: rgba(18,183,106,0.12);
+    --danger: #e5484d;
+    --danger-soft: rgba(229,72,77,0.12);
+    --shadow: 0 1px 2px rgba(20,40,30,0.06), 0 8px 24px rgba(20,40,30,0.06);
+    --radius: 16px;
+    --radius-sm: 9px;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1613;
+    --surface: #16211c;
+    --surface-alt: #1c2b23;
+    --border: #26382e;
+    --text: #e9f5ee;
+    --text-muted: #8faa9b;
+    --accent: #1bd96a;
+    --accent-strong: #2ef185;
+    --accent-soft: rgba(27,217,106,0.16);
+    --danger: #f2696d;
+    --danger-soft: rgba(242,105,109,0.16);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.35);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    transition: background .25s ease, color .25s ease;
+    overflow: hidden;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', 'Inter', sans-serif; letter-spacing: -0.01em; }
+  button, input, select { font-family: inherit; color: inherit; }
+  a { color: var(--accent-strong); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ---- Topbar ---- */
+  .topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    z-index: 20;
+  }
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 11px;
+    border: 1px solid var(--border); background: var(--surface);
+    cursor: pointer; color: var(--text);
+    transition: border-color .15s ease, transform .1s ease;
+  }
+  .icon-btn:hover { border-color: var(--accent); }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn svg { width: 19px; height: 19px; }
+  #settingsBtn { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); }
+
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--accent); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #06210f; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+    overflow: hidden;
+  }
+  .brand-mark img { width: 100%; height: 100%; object-fit: cover; }
+  .brand-name { font-weight: 600; font-size: 16px; }
+
+  /* ---- Body row: left sidebar | stage | right sidebar ---- */
+  .body-row { flex: 1; display: flex; min-height: 0; }
+
+  .side {
+    flex: 0 0 300px;
+    background: var(--surface);
+    padding: 20px 18px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .side-left { border-right: 1px solid var(--border); }
+  .side-right { flex-basis: 320px; border-left: 1px solid var(--border); }
+
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  select, .text-input {
+    width: 100%; padding: 9px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface-alt); font-size: 13.5px; color: var(--text);
+  }
+  select:focus, .text-input:focus, button:focus-visible, .icon-btn:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  .range-row { display: flex; gap: 8px; align-items: center; }
+  .range-row .text-input { width: 100%; }
+  .range-row span { color: var(--text-muted); font-size: 12px; }
+
+  .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--border); background: var(--surface-alt);
+    padding: 6px 11px; border-radius: 100px; font-size: 12.5px;
+    cursor: pointer; user-select: none; transition: all .12s ease;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #06210f; font-weight: 600; }
+
+  .loader-group { display: flex; flex-direction: column; gap: 7px; }
+  .loader-group-title { font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+  .switch { position: relative; width: 40px; height: 23px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track { position: absolute; inset: 0; background: var(--border); border-radius: 100px; transition: background .15s ease; cursor: pointer; }
+  .switch .track::before {
+    content: ""; position: absolute; width: 17px; height: 17px; left: 3px; top: 3px;
+    background: var(--surface); border-radius: 50%; transition: transform .15s ease; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::before { transform: translateX(17px); }
+
+  hr.sep { border: none; border-top: 1px solid var(--border); margin: 0; }
+  .reset-link {
+    background: none; border: none; color: var(--text-muted); font-size: 12.5px;
+    text-decoration: underline; cursor: pointer; padding: 0; align-self: flex-end; margin-top: auto;
+  }
+  .reset-link:hover { color: var(--danger); }
+
+  /* ---- Stage / slot machine ---- */
+  .stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; }
+  .machine-wrap { width: 100%; max-width: 540px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+  .lights { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; }
+  .lights span {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    opacity: .3; animation: twinkle 2.4s ease-in-out infinite;
+  }
+  .lights span:nth-child(odd) { animation-delay: .5s; }
+  .lights span:nth-child(3n) { animation-delay: 1s; }
+  .lights span:nth-child(4n) { animation-delay: 1.5s; }
+  @keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .95; } }
+
+  .machine-frame {
+    width: 100%;
+    background: linear-gradient(165deg, var(--surface), var(--surface-alt));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+  }
+  .machine-count { text-align: center; font-size: 13px; color: var(--text-muted); font-weight: 500; }
+  .machine-count strong { color: var(--accent-strong); font-weight: 700; }
+
+  .reel {
+    position: relative;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    border-radius: 13px;
+    padding: 12px 18px;
+    height: 112px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px var(--accent-soft) inset;
+    transition: box-shadow .3s ease;
+  }
+  .reel.spinning { box-shadow: 0 0 0 1px var(--accent-soft) inset, 0 0 22px var(--accent-soft); }
+  .reel-inner { width: 100%; height: 100%; }
+  .spin-track { display: flex; flex-direction: column; gap: 10px; }
+  .spin-item { height: 86px; flex: 0 0 86px; overflow: hidden; }
+
+  .mod-card { display: flex; gap: 14px; align-items: flex-start; }
+  .mod-icon { width: 68px; height: 68px; border-radius: 13px; object-fit: cover; background: var(--surface); border: 1px solid var(--border); flex-shrink: 0; }
+  .mod-icon.placeholder { display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .mod-main { min-width: 0; flex: 1; }
+  .mod-title-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .mod-title { font-size: 18px; font-weight: 700; margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mod-title a { color: var(--text); text-decoration: none; }
+  .mod-title a:hover { color: var(--accent-strong); text-decoration: underline; }
+  .copy-btn {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); transition: color .15s, border-color .15s;
+  }
+  .copy-btn:hover { color: var(--accent-strong); border-color: var(--accent); }
+  .copy-btn svg { width: 13px; height: 13px; }
+  .mod-desc {
+    font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .mod-tags { display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 8px; overflow: hidden; white-space: nowrap; }
+  .tag { flex: 0 0 auto; font-size: 10.5px; padding: 3px 8px; border-radius: 100px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+
+  .mod-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; margin-left: 6px; }
+  .mod-stats .stat { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .mod-stats svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  .reel.spinning .mod-card { opacity: .85; }
+  .reel-empty { text-align: center; color: var(--text-muted); font-size: 14px; padding: 14px 0; }
+
+  .spin-btn {
+    align-self: center; background: var(--accent); color: #06210f; border: none;
+    font-weight: 700; font-size: 15px; padding: 14px 50px; border-radius: 100px; cursor: pointer;
+    transition: transform .1s ease, background .15s ease, opacity .15s ease, box-shadow .2s ease;
+    font-family: 'Space Grotesk', sans-serif; letter-spacing: .01em;
+    box-shadow: 0 6px 18px var(--accent-soft);
+  }
+  .spin-btn:hover:not(:disabled) { background: var(--accent-strong); }
+  .spin-btn:active:not(:disabled) { transform: scale(0.97); }
+  .spin-btn:disabled { opacity: .6; cursor: default; }
+
+  /* ---- Settings drawer (docked left) ---- */
+  .backdrop {
+    position: fixed; inset: 0; background: rgba(8,16,12,0.5);
+    opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 55;
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .drawer {
+    position: fixed; top: 0; left: 0; height: 100vh; width: 340px; max-width: 88vw;
+    background: var(--surface); border-right: 1px solid var(--border);
+    transform: translateX(-100%); transition: transform .25s ease;
+    z-index: 60; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 18px;
+    box-shadow: 12px 0 30px rgba(0,0,0,.15);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; }
+  .drawer-head h2 { margin: 0; font-size: 17px; }
+  .drawer-section { display: flex; flex-direction: column; gap: 10px; }
+  .drawer-section h3 { margin: 0; font-size: 12px; color: var(--text-muted); font-weight: 700; }
+  .theme-choice, .lang-choice { display: flex; gap: 8px; flex-wrap: wrap; }
+  .blocked-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+  .blocked-item { display: flex; align-items: center; gap: 8px; background: var(--surface-alt); border-radius: var(--radius-sm); padding: 6px 9px; font-size: 13px; }
+  .blocked-icon { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); }
+  .blocked-icon.placeholder { display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .blocked-item a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); text-decoration: none; }
+  .blocked-item a:hover { color: var(--accent-strong); text-decoration: underline; }
+  .blocked-item button { background: none; border: none; cursor: pointer; color: var(--danger); font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .add-row { display: flex; gap: 8px; }
+  .add-row .text-input { flex: 1; }
+  .btn { padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-weight: 600; font-size: 13px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #06210f; }
+  .btn.danger { color: var(--danger); border-color: var(--danger-soft); }
+  .btn:hover { filter: brightness(0.97); }
+  .empty-note { color: var(--text-muted); font-size: 12.5px; margin: 0; }
+  .drawer-actions { display: flex; justify-content: flex-end; }
+
+  .author-credit { display: flex; align-items: center; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); margin-top: auto; }
+  .author-credit a { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+  .author-credit a:hover { color: var(--accent-strong); }
+  .author-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); background: var(--accent-soft); }
+  .author-credit .made-by { font-size: 11px; color: var(--text-muted); display: block; }
+  .author-credit .author-name { font-size: 13.5px; font-weight: 700; }
+
+  /* ---- Confirm dialog ---- */
+  .confirm-box { position: fixed; inset: 0; background: rgba(10,20,15,0.55); display: none; align-items: center; justify-content: center; z-index: 70; padding: 16px; }
+  .confirm-box.open { display: flex; }
+  .confirm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; max-width: 360px; width: 100%; box-shadow: var(--shadow); }
+  .confirm-card p { margin: 0 0 16px; font-size: 14px; }
+  .confirm-card .drawer-actions { justify-content: flex-end; gap: 8px; }
+
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 100px;
+    font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .2s ease, transform .2s ease;
+    pointer-events: none; z-index: 80;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    #app { height: auto; min-height: 100vh; }
+    .body-row { flex-direction: column; }
+    .side { flex: 0 0 auto; border: none !important; border-top: 1px solid var(--border) !important; overflow-y: visible; }
+    .stage { order: -1; }
+    .side-left { order: 1; }
+    .side-right { order: 2; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="topbar">
+    <button class="icon-btn" id="settingsBtn" aria-label="Настройки" title="Настройки">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+    <div class="brand">
+      <div class="brand-mark" id="brandMark">M</div>
+      <div class="brand-name">Mod Roulette</div>
+    </div>
+  </div>
+
+  <div class="body-row">
+    <aside class="side side-left">
+      <div class="field">
+        <label data-i18n="versionLabel">Версия Minecraft</label>
+        <select id="versionSelect"><option value="" data-i18n="anyOption">Любая</option></select>
+      </div>
+
+      <div class="field">
+        <label data-i18n="loaderLabel">Загрузчик</label>
+        <div id="loaderGroups" style="display:flex; flex-direction:column; gap:14px;"></div>
+      </div>
+
+      <div class="field">
+        <label data-i18n="projectTypeLabel">Тип контента</label>
+        <div class="chip-group" id="typeChips">
+          <div class="chip" data-type="mod" data-i18n="modsLabel">Моды</div>
+          <div class="chip" data-type="resourcepack" data-i18n="resourcepacksLabel">Ресурспаки</div>
+          <div class="chip" data-type="datapack" data-i18n="datapacksLabel">Датапаки</div>
+          <div class="chip" data-type="shader" data-i18n="shadersLabel">Шейдеры</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div class="machine-wrap">
+        <div class="lights" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="machine-frame">
+          <div class="machine-count" id="machineCount" data-i18n="loadingText">Загрузка…</div>
+          <div class="reel" id="reel">
+            <div class="reel-inner" id="reelInner">
+              <div class="reel-empty" id="reelEmpty" data-i18n="loadingText">Загрузка…</div>
+            </div>
+          </div>
+          <button class="spin-btn" id="spinBtn" disabled>
+            <span data-i18n="startBtn">Крутить</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="side side-right">
+      <div class="field">
+        <label data-i18n="categoriesLabel">Категории</label>
+        <div class="chip-group" id="categoryChips"></div>
+      </div>
+
+      <hr class="sep">
+
+      <div class="toggle-row">
+        <span data-i18n="clientLabel">Клиент</span>
+        <label class="switch"><input type="checkbox" id="clientToggle"><span class="track"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span data-i18n="serverLabel">Сервер</span>
+        <label class="switch"><input type="checkbox" id="serverToggle"><span class="track"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span data-i18n="openSourceLabel">Открытый исходный код</span>
+        <label class="switch"><input type="checkbox" id="openSourceToggle"><span class="track"></span></label>
+      </div>
+
+      <hr class="sep">
+
+      <div class="field">
+        <label data-i18n="downloadsLabel">Количество загрузок</label>
+        <div class="range-row">
+          <input type="number" min="0" class="text-input" id="downloadsFrom" data-i18n-placeholder="fromPlaceholder" placeholder="от">
+          <span>—</span>
+          <input type="number" min="0" class="text-input" id="downloadsTo" data-i18n-placeholder="toPlaceholder" placeholder="до">
+        </div>
+      </div>
+
+      <div class="field">
+        <label data-i18n="likesLabel">Количество лайков</label>
+        <div class="range-row">
+          <input type="number" min="0" class="text-input" id="likesFrom" data-i18n-placeholder="fromPlaceholder" placeholder="от">
+          <span>—</span>
+          <input type="number" min="0" class="text-input" id="likesTo" data-i18n-placeholder="toPlaceholder" placeholder="до">
+        </div>
+      </div>
+
+      <button class="reset-link" id="resetFilters" data-i18n="resetFilters">Сбросить критерии</button>
+    </aside>
+  </div>
+</div>
+
+<!-- Settings drawer -->
+<div class="backdrop" id="settingsBackdrop"></div>
+<div class="drawer" id="settingsDrawer">
+  <div class="drawer-head">
+    <h2 data-i18n="settingsTitle">Настройки</h2>
+    <button class="icon-btn" id="closeSettings" aria-label="Закрыть">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="drawer-section">
+    <h3 data-i18n="themeLabel">Тема</h3>
+    <div class="theme-choice">
+      <button class="btn" data-theme-choice="system" data-i18n="themeSystem">Системная</button>
+      <button class="btn" data-theme-choice="light" data-i18n="themeLight">Светлая</button>
+      <button class="btn" data-theme-choice="dark" data-i18n="themeDark">Тёмная</button>
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <h3 data-i18n="languageLabel">Язык</h3>
+    <select id="langSelect"></select>
+  </div>
+
+  <hr class="sep">
+
+  <div class="drawer-section">
+    <h3 data-i18n="blockedModsTitle">Заблокированные моды</h3>
+    <div class="add-row">
+      <input class="text-input" id="addModInput" data-i18n-placeholder="addModPlaceholder" placeholder="Название мода…">
+      <button class="btn primary" id="addModBtn" data-i18n="addBtn">Добавить</button>
+    </div>
+    <div class="blocked-list" id="blockedList"></div>
+    <p class="empty-note" id="blockedEmptyNote" data-i18n="noBlockedMods">Список пуст.</p>
+  </div>
+
+  <div class="toggle-row">
+    <span data-i18n="autoBlockLabel">Автоблокировка после выпадения</span>
+    <label class="switch"><input type="checkbox" id="autoBlockToggle"><span class="track"></span></label>
+  </div>
+
+  <div class="drawer-actions">
+    <button class="btn danger" id="clearBlockedBtn" data-i18n="clearAllBtn">Очистить всё</button>
+  </div>
+
+  <div class="author-credit">
+    <a href="https://www.youtube.com/@Mr_Faza0" target="_blank" rel="noopener">
+      <img class="author-avatar" id="authorAvatar" src="my%20icon.jpg" alt="MrFaza0">
+      <span>
+        <span class="made-by" data-i18n="siteAuthor">Сделано:</span>
+        <span class="author-name">MrFaza0</span>
+      </span>
+    </a>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="confirm-box" id="confirmBox">
+  <div class="confirm-card">
+    <p data-i18n="clearConfirmText">Удалить весь список заблокированных модов? Это действие нельзя отменить.</p>
+    <div class="drawer-actions">
+      <button class="btn" id="confirmCancel" data-i18n="cancelBtn">Отмена</button>
+      <button class="btn danger" id="confirmYes" data-i18n="yesBtn">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+const API = "https://api.modrinth.com/v2";
+const STORAGE_KEY = "modroulette_state_v2";
+
+/* ---------------------------------------------------------- icons --- */
+const ICONS = {
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 21s-7.5-4.6-10-9.2C.5 8.4 2.4 5 6 5c2 0 3.6 1.1 4.5 2.5C11.4 6.1 13 5 15 5c3.6 0 5.5 3.4 4 6.8-2.5 4.6-10 9.2-10 9.2z"/></svg>',
+  author: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>'
+};
+
+/* ------------------------------------------------------- loaders ---- */
+const LOADER_GROUPS = [
+  { key: "loaderGroupMods", items: ["fabric","forge","neoforge","babric","bta-babric","java-agent","legacy-fabric","liteloader","modloader","nilloader","ornithe","quilt","rift"] },
+  { key: "loaderGroupPlugins", items: ["paper","spigot","bukkit","folia","purpur","sponge","geyser"] },
+  { key: "loaderGroupProxy", items: ["bungeecord","velocity","waterfall"] }
+];
+
+/* ---------------------------------------------------------- i18n ---- */
+const LANGS = [
+  { code: "en", name: "English" }, { code: "ru", name: "Русский" }, { code: "es", name: "Español" },
+  { code: "pt", name: "Português" }, { code: "de", name: "Deutsch" }, { code: "fr", name: "Français" },
+  { code: "zh", name: "中文" }, { code: "ja", name: "日本語" }, { code: "ko", name: "한국어" }, { code: "pl", name: "Polski" }
+];
+
+const I18N = {
+  en: {
+    startBtn: "Spin", spinning: "Spinning…", loadingText: "Loading…",
+    availableCount: "Available mods: {n}", noModsFound: "No mods match these filters",
+    errorText: "Couldn't reach Modrinth. Try again.",
+    versionLabel: "Minecraft version", anyOption: "Any", loaderLabel: "Loader", projectTypeLabel: "Content type",
+    modsLabel: "Mods", resourcepacksLabel: "Resource packs", datapacksLabel: "Data packs", shadersLabel: "Shaders",
+    categoriesLabel: "Categories", clientLabel: "Client", serverLabel: "Server",
+    openSourceLabel: "Open source", downloadsLabel: "Downloads", likesLabel: "Likes",
+    fromPlaceholder: "from", toPlaceholder: "to", resetFilters: "Reset filters",
+    loaderGroupMods: "Mod loaders", loaderGroupPlugins: "Plugin loaders", loaderGroupProxy: "Proxy servers",
+    settingsTitle: "Settings", themeLabel: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
+    languageLabel: "Language", blockedModsTitle: "Blocked mods", addModPlaceholder: "Mod name…", addBtn: "Add",
+    noBlockedMods: "The list is empty.", autoBlockLabel: "Auto-block after a mod is picked",
+    clearAllBtn: "Clear all", clearConfirmText: "Delete the entire blocked mods list? This can't be undone.",
+    yesBtn: "Delete", cancelBtn: "Cancel", byAuthor: "by {a}",
+    modNotFound: "No mod found with that name", modAlreadyBlocked: "Already blocked", modAdded: "Added to blocked list",
+    modRemoved: "Removed", clearedAll: "Blocked list cleared", searching: "Searching…",
+    copyTitle: "Copy name", copied: "Copied", siteAuthor: "Made by:"
+  },
+  ru: {
+    startBtn: "Крутить", spinning: "Крутится…", loadingText: "Загрузка…",
+    availableCount: "Доступно модов: {n}", noModsFound: "По этим критериям ничего не найдено",
+    errorText: "Не удалось связаться с Modrinth. Попробуйте ещё раз.",
+    versionLabel: "Версия Minecraft", anyOption: "Любая", loaderLabel: "Загрузчик", projectTypeLabel: "Тип контента",
+    modsLabel: "Моды", resourcepacksLabel: "Ресурспаки", datapacksLabel: "Датапаки", shadersLabel: "Шейдеры",
+    categoriesLabel: "Категории", clientLabel: "Клиент", serverLabel: "Сервер",
+    openSourceLabel: "Открытый исходный код", downloadsLabel: "Количество загрузок", likesLabel: "Количество лайков",
+    fromPlaceholder: "от", toPlaceholder: "до", resetFilters: "Сбросить критерии",
+    loaderGroupMods: "Загрузчики модов", loaderGroupPlugins: "Загрузчики плагинов", loaderGroupProxy: "Прокси-серверные загрузчики",
+    settingsTitle: "Настройки", themeLabel: "Тема", themeSystem: "Системная", themeLight: "Светлая", themeDark: "Тёмная",
+    languageLabel: "Язык", blockedModsTitle: "Заблокированные моды", addModPlaceholder: "Название мода…", addBtn: "Добавить",
+    noBlockedMods: "Список пуст.", autoBlockLabel: "Автоблокировка после выпадения",
+    clearAllBtn: "Очистить всё", clearConfirmText: "Удалить весь список заблокированных модов? Это действие нельзя отменить.",
+    yesBtn: "Удалить", cancelBtn: "Отмена", byAuthor: "автор: {a}",
+    modNotFound: "Мод с таким названием не найден", modAlreadyBlocked: "Уже заблокирован", modAdded: "Добавлено в блок-лист",
+    modRemoved: "Удалено", clearedAll: "Блок-лист очищен", searching: "Поиск…",
+    copyTitle: "Скопировать название", copied: "Скопировано", siteAuthor: "Сделано:"
+  },
+  es: {
+    startBtn: "Girar", spinning: "Girando…", loadingText: "Cargando…",
+    availableCount: "Mods disponibles: {n}", noModsFound: "No hay mods con estos filtros",
+    errorText: "No se pudo conectar con Modrinth. Inténtalo de nuevo.",
+    versionLabel: "Versión de Minecraft", anyOption: "Cualquiera", loaderLabel: "Cargador", projectTypeLabel: "Tipo de contenido",
+    modsLabel: "Mods", resourcepacksLabel: "Paquetes de recursos", datapacksLabel: "Paquetes de datos", shadersLabel: "Shaders",
+    categoriesLabel: "Categorías", clientLabel: "Cliente", serverLabel: "Servidor",
+    openSourceLabel: "Código abierto", downloadsLabel: "Descargas", likesLabel: "Me gusta",
+    fromPlaceholder: "desde", toPlaceholder: "hasta", resetFilters: "Restablecer filtros",
+    loaderGroupMods: "Cargadores de mods", loaderGroupPlugins: "Cargadores de plugins", loaderGroupProxy: "Servidores proxy",
+    settingsTitle: "Ajustes", themeLabel: "Tema", themeSystem: "Sistema", themeLight: "Claro", themeDark: "Oscuro",
+    languageLabel: "Idioma", blockedModsTitle: "Mods bloqueados", addModPlaceholder: "Nombre del mod…", addBtn: "Añadir",
+    noBlockedMods: "La lista está vacía.", autoBlockLabel: "Bloquear automáticamente al salir sorteado",
+    clearAllBtn: "Borrar todo", clearConfirmText: "¿Eliminar toda la lista de mods bloqueados? No se puede deshacer.",
+    yesBtn: "Eliminar", cancelBtn: "Cancelar", byAuthor: "por {a}",
+    modNotFound: "No se encontró ningún mod con ese nombre", modAlreadyBlocked: "Ya está bloqueado", modAdded: "Añadido a la lista",
+    modRemoved: "Eliminado", clearedAll: "Lista de bloqueados vaciada", searching: "Buscando…",
+    copyTitle: "Copiar nombre", copied: "Copiado", siteAuthor: "Creado por:"
+  },
+  pt: {
+    startBtn: "Girar", spinning: "Girando…", loadingText: "Carregando…",
+    availableCount: "Mods disponíveis: {n}", noModsFound: "Nenhum mod corresponde a esses filtros",
+    errorText: "Não foi possível conectar ao Modrinth. Tente novamente.",
+    versionLabel: "Versão do Minecraft", anyOption: "Qualquer", loaderLabel: "Loader", projectTypeLabel: "Tipo de conteúdo",
+    modsLabel: "Mods", resourcepacksLabel: "Resource packs", datapacksLabel: "Data packs", shadersLabel: "Shaders",
+    categoriesLabel: "Categorias", clientLabel: "Cliente", serverLabel: "Servidor",
+    openSourceLabel: "Código aberto", downloadsLabel: "Downloads", likesLabel: "Curtidas",
+    fromPlaceholder: "de", toPlaceholder: "até", resetFilters: "Redefinir filtros",
+    loaderGroupMods: "Loaders de mods", loaderGroupPlugins: "Loaders de plugins", loaderGroupProxy: "Servidores proxy",
+    settingsTitle: "Configurações", themeLabel: "Tema", themeSystem: "Sistema", themeLight: "Claro", themeDark: "Escuro",
+    languageLabel: "Idioma", blockedModsTitle: "Mods bloqueados", addModPlaceholder: "Nome do mod…", addBtn: "Adicionar",
+    noBlockedMods: "A lista está vazia.", autoBlockLabel: "Bloquear automaticamente após sorteio",
+    clearAllBtn: "Limpar tudo", clearConfirmText: "Excluir toda a lista de mods bloqueados? Isso não pode ser desfeito.",
+    yesBtn: "Excluir", cancelBtn: "Cancelar", byAuthor: "por {a}",
+    modNotFound: "Nenhum mod encontrado com esse nome", modAlreadyBlocked: "Já está bloqueado", modAdded: "Adicionado à lista",
+    modRemoved: "Removido", clearedAll: "Lista de bloqueados limpa", searching: "Buscando…",
+    copyTitle: "Copiar nome", copied: "Copiado", siteAuthor: "Feito por:"
+  },
+  de: {
+    startBtn: "Drehen", spinning: "Dreht…", loadingText: "Lädt…",
+    availableCount: "Verfügbare Mods: {n}", noModsFound: "Keine Mods passen zu diesen Filtern",
+    errorText: "Verbindung zu Modrinth fehlgeschlagen. Bitte erneut versuchen.",
+    versionLabel: "Minecraft-Version", anyOption: "Beliebig", loaderLabel: "Loader", projectTypeLabel: "Inhaltstyp",
+    modsLabel: "Mods", resourcepacksLabel: "Ressourcenpakete", datapacksLabel: "Datenpakete", shadersLabel: "Shader",
+    categoriesLabel: "Kategorien", clientLabel: "Client", serverLabel: "Server",
+    openSourceLabel: "Open Source", downloadsLabel: "Downloads", likesLabel: "Likes",
+    fromPlaceholder: "von", toPlaceholder: "bis", resetFilters: "Filter zurücksetzen",
+    loaderGroupMods: "Mod-Loader", loaderGroupPlugins: "Plugin-Loader", loaderGroupProxy: "Proxy-Server",
+    settingsTitle: "Einstellungen", themeLabel: "Design", themeSystem: "System", themeLight: "Hell", themeDark: "Dunkel",
+    languageLabel: "Sprache", blockedModsTitle: "Blockierte Mods", addModPlaceholder: "Mod-Name…", addBtn: "Hinzufügen",
+    noBlockedMods: "Die Liste ist leer.", autoBlockLabel: "Nach Auswahl automatisch blockieren",
+    clearAllBtn: "Alles löschen", clearConfirmText: "Die gesamte Liste blockierter Mods löschen? Kann nicht rückgängig gemacht werden.",
+    yesBtn: "Löschen", cancelBtn: "Abbrechen", byAuthor: "von {a}",
+    modNotFound: "Kein Mod mit diesem Namen gefunden", modAlreadyBlocked: "Bereits blockiert", modAdded: "Zur Liste hinzugefügt",
+    modRemoved: "Entfernt", clearedAll: "Liste geleert", searching: "Suche…",
+    copyTitle: "Namen kopieren", copied: "Kopiert", siteAuthor: "Erstellt von:"
+  },
+  fr: {
+    startBtn: "Lancer", spinning: "Ça tourne…", loadingText: "Chargement…",
+    availableCount: "Mods disponibles : {n}", noModsFound: "Aucun mod ne correspond à ces filtres",
+    errorText: "Impossible de contacter Modrinth. Réessayez.",
+    versionLabel: "Version de Minecraft", anyOption: "Toutes", loaderLabel: "Loader", projectTypeLabel: "Type de contenu",
+    modsLabel: "Mods", resourcepacksLabel: "Packs de ressources", datapacksLabel: "Packs de données", shadersLabel: "Shaders",
+    categoriesLabel: "Catégories", clientLabel: "Client", serverLabel: "Serveur",
+    openSourceLabel: "Open source", downloadsLabel: "Téléchargements", likesLabel: "J'aime",
+    fromPlaceholder: "de", toPlaceholder: "à", resetFilters: "Réinitialiser les filtres",
+    loaderGroupMods: "Loaders de mods", loaderGroupPlugins: "Loaders de plugins", loaderGroupProxy: "Serveurs proxy",
+    settingsTitle: "Paramètres", themeLabel: "Thème", themeSystem: "Système", themeLight: "Clair", themeDark: "Sombre",
+    languageLabel: "Langue", blockedModsTitle: "Mods bloqués", addModPlaceholder: "Nom du mod…", addBtn: "Ajouter",
+    noBlockedMods: "La liste est vide.", autoBlockLabel: "Bloquer automatiquement après tirage",
+    clearAllBtn: "Tout effacer", clearConfirmText: "Supprimer toute la liste des mods bloqués ? Action irréversible.",
+    yesBtn: "Supprimer", cancelBtn: "Annuler", byAuthor: "par {a}",
+    modNotFound: "Aucun mod trouvé avec ce nom", modAlreadyBlocked: "Déjà bloqué", modAdded: "Ajouté à la liste",
+    modRemoved: "Supprimé", clearedAll: "Liste vidée", searching: "Recherche…",
+    copyTitle: "Copier le nom", copied: "Copié", siteAuthor: "Créé par :"
+  },
+  zh: {
+    startBtn: "开始", spinning: "抽取中…", loadingText: "加载中…",
+    availableCount: "可用模组：{n}", noModsFound: "没有符合条件的模组",
+    errorText: "无法连接到 Modrinth，请重试。",
+    versionLabel: "Minecraft 版本", anyOption: "任意", loaderLabel: "加载器", projectTypeLabel: "内容类型",
+    modsLabel: "模组", resourcepacksLabel: "资源包", datapacksLabel: "数据包", shadersLabel: "光影",
+    categoriesLabel: "分类", clientLabel: "客户端", serverLabel: "服务端",
+    openSourceLabel: "开源", downloadsLabel: "下载量", likesLabel: "点赞数",
+    fromPlaceholder: "最小", toPlaceholder: "最大", resetFilters: "重置筛选",
+    loaderGroupMods: "模组加载器", loaderGroupPlugins: "插件加载器", loaderGroupProxy: "代理服务端",
+    settingsTitle: "设置", themeLabel: "主题", themeSystem: "跟随系统", themeLight: "浅色", themeDark: "深色",
+    languageLabel: "语言", blockedModsTitle: "已屏蔽模组", addModPlaceholder: "模组名称…", addBtn: "添加",
+    noBlockedMods: "列表为空。", autoBlockLabel: "抽中后自动屏蔽",
+    clearAllBtn: "清空全部", clearConfirmText: "删除整个屏蔽列表？此操作无法撤销。",
+    yesBtn: "删除", cancelBtn: "取消", byAuthor: "作者：{a}",
+    modNotFound: "未找到该名称的模组", modAlreadyBlocked: "已在屏蔽列表中", modAdded: "已加入屏蔽列表",
+    modRemoved: "已移除", clearedAll: "屏蔽列表已清空", searching: "搜索中…",
+    copyTitle: "复制名称", copied: "已复制", siteAuthor: "制作者："
+  },
+  ja: {
+    startBtn: "回す", spinning: "回転中…", loadingText: "読み込み中…",
+    availableCount: "利用可能なMod数：{n}", noModsFound: "条件に一致するMODがありません",
+    errorText: "Modrinthに接続できませんでした。もう一度お試しください。",
+    versionLabel: "Minecraftバージョン", anyOption: "指定なし", loaderLabel: "ローダー", projectTypeLabel: "コンテンツの種類",
+    modsLabel: "MOD", resourcepacksLabel: "リソースパック", datapacksLabel: "データパック", shadersLabel: "シェーダー",
+    categoriesLabel: "カテゴリー", clientLabel: "クライアント", serverLabel: "サーバー",
+    openSourceLabel: "オープンソース", downloadsLabel: "ダウンロード数", likesLabel: "いいね数",
+    fromPlaceholder: "最小", toPlaceholder: "最大", resetFilters: "フィルターをリセット",
+    loaderGroupMods: "MODローダー", loaderGroupPlugins: "プラグインローダー", loaderGroupProxy: "プロキシサーバー",
+    settingsTitle: "設定", themeLabel: "テーマ", themeSystem: "システム", themeLight: "ライト", themeDark: "ダーク",
+    languageLabel: "言語", blockedModsTitle: "ブロック済みMOD", addModPlaceholder: "MOD名…", addBtn: "追加",
+    noBlockedMods: "リストは空です。", autoBlockLabel: "抽選後に自動でブロック",
+    clearAllBtn: "すべて削除", clearConfirmText: "ブロックリストをすべて削除しますか？元に戻せません。",
+    yesBtn: "削除", cancelBtn: "キャンセル", byAuthor: "作者：{a}",
+    modNotFound: "その名前のMODが見つかりません", modAlreadyBlocked: "すでにブロック済みです", modAdded: "リストに追加しました",
+    modRemoved: "削除しました", clearedAll: "ブロックリストを削除しました", searching: "検索中…",
+    copyTitle: "名前をコピー", copied: "コピーしました", siteAuthor: "制作："
+  },
+  ko: {
+    startBtn: "돌리기", spinning: "돌아가는 중…", loadingText: "불러오는 중…",
+    availableCount: "사용 가능한 모드: {n}개", noModsFound: "이 조건에 맞는 모드가 없습니다",
+    errorText: "Modrinth에 연결할 수 없습니다. 다시 시도하세요.",
+    versionLabel: "마인크래프트 버전", anyOption: "전체", loaderLabel: "로더", projectTypeLabel: "콘텐츠 유형",
+    modsLabel: "모드", resourcepacksLabel: "리소스팩", datapacksLabel: "데이터팩", shadersLabel: "쉐이더",
+    categoriesLabel: "카테고리", clientLabel: "클라이언트", serverLabel: "서버",
+    openSourceLabel: "오픈소스", downloadsLabel: "다운로드 수", likesLabel: "좋아요 수",
+    fromPlaceholder: "최소", toPlaceholder: "최대", resetFilters: "필터 초기화",
+    loaderGroupMods: "모드 로더", loaderGroupPlugins: "플러그인 로더", loaderGroupProxy: "프록시 서버",
+    settingsTitle: "설정", themeLabel: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
+    languageLabel: "언어", blockedModsTitle: "차단된 모드", addModPlaceholder: "모드 이름…", addBtn: "추가",
+    noBlockedMods: "목록이 비어 있습니다.", autoBlockLabel: "선택 후 자동 차단",
+    clearAllBtn: "전체 삭제", clearConfirmText: "차단 목록을 전부 삭제할까요? 되돌릴 수 없습니다.",
+    yesBtn: "삭제", cancelBtn: "취소", byAuthor: "제작자: {a}",
+    modNotFound: "해당 이름의 모드를 찾을 수 없습니다", modAlreadyBlocked: "이미 차단됨", modAdded: "목록에 추가됨",
+    modRemoved: "삭제됨", clearedAll: "차단 목록이 비워짐", searching: "검색 중…",
+    copyTitle: "이름 복사", copied: "복사됨", siteAuthor: "제작:"
+  },
+  pl: {
+    startBtn: "Losuj", spinning: "Losowanie…", loadingText: "Ładowanie…",
+    availableCount: "Dostępne mody: {n}", noModsFound: "Brak modów pasujących do tych filtrów",
+    errorText: "Nie udało się połączyć z Modrinth. Spróbuj ponownie.",
+    versionLabel: "Wersja Minecrafta", anyOption: "Dowolna", loaderLabel: "Loader", projectTypeLabel: "Typ zawartości",
+    modsLabel: "Mody", resourcepacksLabel: "Paczki zasobów", datapacksLabel: "Paczki danych", shadersLabel: "Shadery",
+    categoriesLabel: "Kategorie", clientLabel: "Klient", serverLabel: "Serwer",
+    openSourceLabel: "Otwarty kod źródłowy", downloadsLabel: "Liczba pobrań", likesLabel: "Liczba polubień",
+    fromPlaceholder: "od", toPlaceholder: "do", resetFilters: "Zresetuj filtry",
+    loaderGroupMods: "Loadery modów", loaderGroupPlugins: "Loadery pluginów", loaderGroupProxy: "Serwery proxy",
+    settingsTitle: "Ustawienia", themeLabel: "Motyw", themeSystem: "Systemowy", themeLight: "Jasny", themeDark: "Ciemny",
+    languageLabel: "Język", blockedModsTitle: "Zablokowane mody", addModPlaceholder: "Nazwa moda…", addBtn: "Dodaj",
+    noBlockedMods: "Lista jest pusta.", autoBlockLabel: "Automatyczna blokada po wylosowaniu",
+    clearAllBtn: "Wyczyść wszystko", clearConfirmText: "Usunąć całą listę zablokowanych modów? Tej operacji nie można cofnąć.",
+    yesBtn: "Usuń", cancelBtn: "Anuluj", byAuthor: "autor: {a}",
+    modNotFound: "Nie znaleziono moda o takiej nazwie", modAlreadyBlocked: "Już zablokowany", modAdded: "Dodano do listy",
+    modRemoved: "Usunięto", clearedAll: "Lista zablokowanych wyczyszczona", searching: "Szukanie…",
+    copyTitle: "Kopiuj nazwę", copied: "Skopiowano", siteAuthor: "Wykonał:"
+  }
+};
+
+function t(key, vars) {
+  const lang = state.language;
+  const dict = I18N[lang] || I18N.en;
+  let str = dict[key] || I18N.en[key] || key;
+  if (vars) Object.keys(vars).forEach(k => { str = str.replace("{" + k + "}", vars[k]); });
+  return str;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = state.language;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder"))); });
+  updateCountLabel();
+}
+
+/* ------------------------------------------------------- state ---- */
+const defaultState = {
+  theme: "system",
+  language: detectLang(),
+  filters: {
+    version: "", loaders: [], types: [], categories: [],
+    client: false, server: false, openSource: false,
+    downloadsFrom: "", downloadsTo: "", likesFrom: "", likesTo: ""
+  },
+  blocked: [], // [{id, slug, title, iconUrl, projectType}]
+  autoBlock: false
+};
+
+function detectLang() {
+  const sys = (navigator.language || "en").slice(0,2).toLowerCase();
+  return I18N[sys] ? sys : "en";
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return JSON.parse(JSON.stringify(defaultState));
+    const parsed = JSON.parse(raw);
+    return Object.assign({}, JSON.parse(JSON.stringify(defaultState)), parsed, {
+      filters: Object.assign({}, defaultState.filters, parsed.filters || {})
+    });
+  } catch(e) { return JSON.parse(JSON.stringify(defaultState)); }
+}
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadState();
+let availableCount = null;
+let categoriesData = [];
+let versionsData = [];
+let currentMod = null;
+let spinning = false;
+
+/* --------------------------------------------------------- theme -- */
+function applyTheme() {
+  const root = document.documentElement;
+  if (state.theme === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", state.theme);
+}
+window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (state.theme === "system") applyTheme();
+});
+
+/* ------------------------------------------------------- toast ---- */
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+/* --------------------------------------------------- Modrinth API - */
+async function apiGet(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function buildFacets() {
+  const f = state.filters;
+  const facets = [];
+  const typeGroup = [];
+  let forceDatapackCategory = false;
+  f.types.forEach(ty => {
+    if (ty === "datapack") { typeGroup.push("project_type:mod"); forceDatapackCategory = true; }
+    else typeGroup.push("project_type:" + ty);
+  });
+  if (typeGroup.length) facets.push(typeGroup);
+  if (forceDatapackCategory && f.types.length === 1) facets.push(["categories:datapack"]);
+  if (f.version) facets.push(["versions:" + f.version]);
+  if (f.loaders.length) facets.push(f.loaders.map(l => "categories:" + l));
+  if (f.categories.length) facets.push(f.categories.map(c => "categories:" + c));
+  if (f.client) facets.push(["client_side:required", "client_side:optional"]);
+  if (f.server) facets.push(["server_side:required", "server_side:optional"]);
+  if (f.openSource) facets.push(["open_source:true"]);
+  if (f.downloadsFrom !== "" && f.downloadsFrom != null) facets.push(["downloads>=" + parseInt(f.downloadsFrom,10)]);
+  if (f.downloadsTo !== "" && f.downloadsTo != null) facets.push(["downloads<=" + parseInt(f.downloadsTo,10)]);
+  if (f.likesFrom !== "" && f.likesFrom != null) facets.push(["follows>=" + parseInt(f.likesFrom,10)]);
+  if (f.likesTo !== "" && f.likesTo != null) facets.push(["follows<=" + parseInt(f.likesTo,10)]);
+  return facets;
+}
+
+async function fetchCount() {
+  const facets = buildFacets();
+  const qs = new URLSearchParams({ query: "", limit: "1", offset: "0" });
+  if (facets.length) qs.set("facets", JSON.stringify(facets));
+  const data = await apiGet("/search?" + qs.toString());
+  return data.total_hits || 0;
+}
+
+async function fetchRandomMod(excludeIds, total) {
+  if (total <= 0) return null;
+  const attempts = Math.min(total, 25);
+  for (let i = 0; i < attempts; i++) {
+    const offset = Math.floor(Math.random() * total);
+    const facets = buildFacets();
+    const qs = new URLSearchParams({ query: "", limit: "1", offset: String(offset) });
+    if (facets.length) qs.set("facets", JSON.stringify(facets));
+    const data = await apiGet("/search?" + qs.toString());
+    const hit = data.hits && data.hits[0];
+    if (hit && !excludeIds.has(hit.project_id)) return hit;
+  }
+  return null;
+}
+
+/* ---------------------------------------------------- rendering --- */
+function updateCountLabel() {
+  const el = document.getElementById("machineCount");
+  if (availableCount === null) el.textContent = t("loadingText");
+  else el.innerHTML = t("availableCount", { n: "<strong>" + availableCount.toLocaleString() + "</strong>" });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+function fitTags(root) {
+  root.querySelectorAll(".mod-tags").forEach(container => {
+    let usedWidth = 0;
+    const gap = 6;
+    Array.from(container.children).forEach(tag => {
+      tag.style.display = "";
+      const tagWidth = tag.getBoundingClientRect().width;
+      if (usedWidth + tagWidth > container.clientWidth) tag.style.display = "none";
+      else usedWidth += tagWidth + gap;
+    });
+  });
+}
+
+const animationAuthors = [
+  "PixelForge", "BlockSmith", "RedstoneRider", "CraftNova", "EnderByte",
+  "CreeperLabs", "VoidWalker", "ChunkMaster", "LunarCraft", "NetherWorks",
+  "QuartzDev", "IronPixel", "OakStudio", "CopperCore", "SkyBuilder",
+  "DeepSlate", "BiomeWorks", "MinePulse", "TorchBearer", "XPFactory",
+  "ObsidianFox", "CraftedCode", "Glowstone", "PortalForge", "WardenDev",
+  "MapleByte", "AmethystLab", "VillageTech", "RedstoneWorks", "FrostByte",
+  "MagmaCraft", "AxolotlDev", "BeaconLabs", "CaveDweller", "DragonCode",
+  "EmeraldWorks", "FlintForge", "HoneyBlock", "JukeboxDev", "MossyStone",
+  "NightMiner", "PrismCraft", "RavagerLabs", "SculkWorks", "SlimeTech",
+  "SpawnerStudio", "TuffWorks", "WarpedPixel", "WitherCode", "ZenithCraft"
+];
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getAnimationTagPool() {
+  const loaderTags = LOADER_GROUPS.flatMap(group => group.items);
+  const categoryTags = categoriesData.map(category => category.name).filter(Boolean);
+  return Array.from(new Set(loaderTags.concat(categoryTags)));
+}
+
+function randomAnimationTags() {
+  const pool = getAnimationTagPool();
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, randomInt(1, Math.min(4, shuffled.length)));
+}
+
+function shuffleProjects(projects) {
+  const shuffled = projects.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = randomInt(0, i);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function makeAnimationProject(project) {
+  return Object.assign({}, project, {
+    animationFake: true,
+    author: animationAuthors[randomInt(0, animationAuthors.length - 1)],
+    display_categories: randomAnimationTags(),
+    categories: []
+  });
+}
+
+function buildModCardHtml(hit, copyButton) {
+  const url = "https://modrinth.com/" + hit.project_type + "/" + hit.slug;
+  const iconHtml = hit.icon_url
+    ? '<img class="mod-icon" src="' + escapeAttr(hit.icon_url) + '" alt="">'
+    : '<div class="mod-icon placeholder">📦</div>';
+  const tags = (hit.display_categories || hit.categories || []).slice(0,4)
+    .map(c => '<span class="tag">' + escapeHtml(c) + '</span>').join("");
+  const titleHtml = hit.animationFake
+    ? escapeHtml(hit.title)
+    : '<a href="' + escapeAttr(url) + '" target="_blank" rel="noopener">' + escapeHtml(hit.title) + '</a>';
+  return '<div class="mod-card">' +
+      iconHtml +
+      '<div class="mod-main">' +
+        '<div class="mod-title-row">' +
+          '<h3 class="mod-title" title="' + escapeAttr(hit.title) + '">' + titleHtml + '</h3>' +
+          (copyButton ? '<button class="copy-btn" title="' + escapeAttr(t("copyTitle")) + '" aria-label="' + escapeAttr(t("copyTitle")) + '">' + ICONS.copy + '</button>' : '') +
+        '</div>' +
+        '<p class="mod-desc">' + escapeHtml(hit.description || "") + '</p>' +
+        (tags ? '<div class="mod-tags">' + tags + '</div>' : '') +
+      '</div>' +
+      '<div class="mod-stats">' +
+        '<span class="stat">' + (hit.downloads||0).toLocaleString() + ICONS.download + '</span>' +
+        '<span class="stat">' + (hit.follows||0).toLocaleString() + ICONS.heart + '</span>' +
+        '<span class="stat">' + escapeHtml(hit.author || "—") + ICONS.author + '</span>' +
+      '</div>' +
+    '</div>';
+}
+
+function bindCopyButton(copyBtn, hit) {
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      const title = hit.title || "";
+      const done = () => showToast(t("copied"));
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(title).then(done).catch(done);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = title; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch(e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  }
+}
+
+function renderMod(hit) {
+  const inner = document.getElementById("reelInner");
+  if (!hit) { inner.innerHTML = '<div class="reel-empty">' + t("noModsFound") + '</div>'; return; }
+  inner.innerHTML = buildModCardHtml(hit, true);
+  fitTags(inner);
+  bindCopyButton(inner.querySelector(".copy-btn"), hit);
+}
+
+function setBrandIcon(hit) {
+  const mark = document.getElementById("brandMark");
+  if (hit && hit.icon_url) {
+    mark.innerHTML = '<img src="' + escapeAttr(hit.icon_url) + '" alt="">';
+  } else {
+    mark.textContent = "M";
+  }
+}
+
+/* ------------------------------------------------------ spin flow - */
+let spinAnim = null;
+let spinCandidates = [];
+let preloadToken = 0;
+let preloadedFinalMod = null;
+let finalPreloadToken = 0;
+let poolLoadPromise = null;
+const usedBackgroundIds = new Set();
+
+function uniqueProjects(projects) {
+  const seen = new Set();
+  return projects.filter(project => {
+    if (!project || seen.has(project.project_id)) return false;
+    seen.add(project.project_id);
+    return true;
+  });
+}
+
+async function fetchSpinCandidates(excludeIds, total, limit) {
+  if (total <= 0) return [];
+  const facets = buildFacets();
+  const maxOffset = Math.max(0, total - limit);
+  const offset = Math.floor(Math.random() * (maxOffset + 1));
+  const qs = new URLSearchParams({ query: "", limit: String(limit), offset: String(offset) });
+  if (facets.length) qs.set("facets", JSON.stringify(facets));
+  const data = await apiGet("/search?" + qs.toString());
+  const excluded = new Set(excludeIds);
+  return uniqueProjects((data.hits || []).filter(hit => !excluded.has(hit.project_id)));
+}
+
+async function loadMoreSpinCandidates(limit) {
+  if (poolLoadPromise) return poolLoadPromise;
+  poolLoadPromise = (async () => {
+    const total = availableCount || await fetchCount();
+    const existingIds = new Set(spinCandidates.map(project => project.project_id));
+    const blockedIds = new Set(state.blocked.map(block => block.id));
+    existingIds.forEach(id => blockedIds.add(id));
+    usedBackgroundIds.forEach(id => blockedIds.add(id));
+    const additions = await fetchSpinCandidates(blockedIds, total, limit);
+    spinCandidates = spinCandidates.concat(additions);
+    return additions;
+  })();
+  try {
+    return await poolLoadPromise;
+  } finally {
+    poolLoadPromise = null;
+  }
+}
+
+async function preloadSpinCandidates() {
+  const token = ++preloadToken;
+  try {
+    const total = await fetchCount();
+    availableCount = total;
+    updateCountLabel();
+    const excludeIds = new Set(state.blocked.map(b => b.id));
+    usedBackgroundIds.forEach(id => excludeIds.add(id));
+    const candidates = await fetchSpinCandidates(excludeIds, total, 200);
+    if (token === preloadToken) spinCandidates = candidates;
+  } catch (e) {
+    if (token === preloadToken) spinCandidates = [];
+  }
+  return token === preloadToken && spinCandidates.length > 0;
+}
+
+async function preloadFinalMod(extraExcludeIds) {
+  const token = ++finalPreloadToken;
+  try {
+    const blockedIds = new Set(state.blocked.map(b => b.id));
+    (extraExcludeIds || []).forEach(id => blockedIds.add(id));
+    const hit = await fetchRandomMod(blockedIds, availableCount || 0);
+    if (token === finalPreloadToken) preloadedFinalMod = hit;
+  } catch (e) {
+    if (token === finalPreloadToken) preloadedFinalMod = null;
+  }
+  return token === finalPreloadToken && !!preloadedFinalMod;
+}
+
+function startSpinAnimation(candidates, finalProject) {
+  const reel = document.getElementById("reel");
+  const inner = document.getElementById("reelInner");
+  reel.classList.add("spinning");
+  const shuffledCandidates = shuffleProjects(candidates.filter(project => project.project_id !== finalProject.project_id));
+  const backgroundSequence = shuffledCandidates.slice(0, 19);
+  const sequence = [finalProject].concat(backgroundSequence);
+  inner.innerHTML = '<div class="spin-track">' + sequence.map(project =>
+    '<div class="spin-item">' + buildModCardHtml(project.project_id === finalProject.project_id ? project : makeAnimationProject(project), false) + '</div>'
+  ).join("") + '</div>';
+  fitTags(inner);
+  const track = inner.querySelector(".spin-track");
+  const itemHeight = track.firstElementChild.getBoundingClientRect().height + 10;
+  track.style.transition = "none";
+  track.style.transform = "translateY(-" + ((sequence.length - 1) * itemHeight) + "px)";
+  requestAnimationFrame(() => {
+    track.style.transition = "transform 1.2s linear";
+    track.style.transform = "translateY(0)";
+  });
+  return {
+    backgroundIds: new Set(backgroundSequence.map(project => project.project_id)),
+    setFinal(project) {
+      if (!project || !track.firstElementChild) return;
+      track.firstElementChild.innerHTML = buildModCardHtml(project, false);
+      fitTags(track.firstElementChild);
+    }
+  };
+}
+function stopSpinAnimation() {
+  clearTimeout(spinAnim);
+  document.getElementById("reel").classList.remove("spinning");
+}
+
+async function doSpin() {
+  if (spinning) return;
+  if (!spinCandidates.length || !preloadedFinalMod) return;
+  spinning = true;
+  document.getElementById("spinBtn").disabled = true;
+  const minSpinTime = new Promise(r => setTimeout(r, 1200));
+  let nextPreloadPromise = null;
+  try {
+    const blockedIds = new Set(state.blocked.map(b => b.id));
+    const candidates = spinCandidates.filter(project => !blockedIds.has(project.project_id));
+    const hit = preloadedFinalMod;
+    preloadedFinalMod = null;
+    nextPreloadPromise = preloadFinalMod(hit ? [hit.project_id] : []);
+    if (!candidates.length) {
+      currentMod = hit;
+      renderMod(hit);
+      return;
+    }
+    const animation = startSpinAnimation(candidates, hit);
+    await minSpinTime;
+    stopSpinAnimation();
+    currentMod = hit;
+    renderMod(hit);
+    if (hit && state.autoBlock) {
+      addBlockedMod({ id: hit.project_id, slug: hit.slug, title: hit.title, iconUrl: hit.icon_url, projectType: hit.project_type }, true);
+    }
+    animation.backgroundIds.forEach(id => usedBackgroundIds.add(id));
+    spinCandidates = spinCandidates.filter(project => !animation.backgroundIds.has(project.project_id));
+    if (spinCandidates.length <= 100) loadMoreSpinCandidates(100);
+  } catch (e) {
+    stopSpinAnimation();
+    document.getElementById("reelInner").innerHTML = '<div class="reel-empty">' + t("errorText") + '</div>';
+  } finally {
+    spinning = false;
+    document.getElementById("spinBtn").disabled = true;
+    if (nextPreloadPromise) nextPreloadPromise.then(ready => {
+      if (!spinning) document.getElementById("spinBtn").disabled = !ready;
+    });
+  }
+}
+
+async function showInitialRandomMod() {
+  document.getElementById("reelInner").innerHTML = '<div class="reel-empty">' + t("loadingText") + '</div>';
+  try {
+    const total = await fetchCount();
+    availableCount = total; updateCountLabel();
+    const excludeIds = new Set(state.blocked.map(b => b.id));
+    usedBackgroundIds.forEach(id => excludeIds.add(id));
+    spinCandidates = await fetchSpinCandidates(excludeIds, total, 200);
+    const hit = await fetchRandomMod(excludeIds, total);
+    currentMod = hit;
+    renderMod(hit);
+    setBrandIcon(hit);
+    await preloadFinalMod(hit ? [hit.project_id] : []);
+  } catch (e) {
+    document.getElementById("reelInner").innerHTML = '<div class="reel-empty">' + t("errorText") + '</div>';
+  }
+}
+
+async function refreshCountOnly() {
+  try { availableCount = await fetchCount(); } catch(e) {}
+  updateCountLabel();
+}
+
+/* -------------------------------------------------- filters UI ---- */
+function renderLoaderGroups() {
+  const wrap = document.getElementById("loaderGroups");
+  wrap.innerHTML = "";
+  LOADER_GROUPS.forEach(group => {
+    const box = document.createElement("div");
+    box.className = "loader-group";
+    const title = document.createElement("div");
+    title.className = "loader-group-title";
+    title.setAttribute("data-i18n", group.key);
+    title.textContent = t(group.key);
+    const chips = document.createElement("div");
+    chips.className = "chip-group";
+    group.items.forEach(name => {
+      const chip = document.createElement("div");
+      chip.className = "chip" + (state.filters.loaders.includes(name) ? " active" : "");
+      chip.textContent = name;
+      chip.addEventListener("click", () => {
+        toggleArrayValue(state.filters.loaders, name);
+        chip.classList.toggle("active");
+        onFiltersChanged();
+      });
+      chips.appendChild(chip);
+    });
+    box.appendChild(title);
+    box.appendChild(chips);
+    wrap.appendChild(box);
+  });
+}
+
+function renderTypeChips() {
+  document.querySelectorAll("#typeChips .chip").forEach(chip => {
+    const ty = chip.getAttribute("data-type");
+    chip.classList.toggle("active", state.filters.types.includes(ty));
+    chip.onclick = () => { toggleArrayValue(state.filters.types, ty); chip.classList.toggle("active"); onFiltersChanged(); };
+  });
+}
+
+function renderCategoryChips() {
+  const wrap = document.getElementById("categoryChips");
+  wrap.innerHTML = "";
+  const relevant = categoriesData.filter(c => c.project_type === "mod");
+  const seen = new Set();
+  relevant.forEach(c => {
+    if (seen.has(c.name)) return;
+    seen.add(c.name);
+    const chip = document.createElement("div");
+    chip.className = "chip" + (state.filters.categories.includes(c.name) ? " active" : "");
+    chip.textContent = c.name;
+    chip.addEventListener("click", () => {
+      toggleArrayValue(state.filters.categories, c.name);
+      chip.classList.toggle("active");
+      onFiltersChanged();
+    });
+    wrap.appendChild(chip);
+  });
+}
+
+function renderVersionSelect() {
+  const sel = document.getElementById("versionSelect");
+  const current = state.filters.version;
+  sel.innerHTML = '<option value="">' + t("anyOption") + '</option>';
+  versionsData.filter(v => v.version_type === "release").forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.version; opt.textContent = v.version;
+    if (v.version === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function toggleArrayValue(arr, val) {
+  const idx = arr.indexOf(val);
+  if (idx === -1) arr.push(val); else arr.splice(idx, 1);
+}
+function onFiltersChanged() {
+  saveState();
+  preloadedFinalMod = null;
+  document.getElementById("spinBtn").disabled = true;
+  refreshCountOnly().then(() => preloadFinalMod()).then(ready => {
+    if (!spinning) document.getElementById("spinBtn").disabled = !ready;
+  });
+}
+
+function bindFilterInputs() {
+  document.getElementById("versionSelect").addEventListener("change", e => { state.filters.version = e.target.value; onFiltersChanged(); });
+  document.getElementById("clientToggle").addEventListener("change", e => { state.filters.client = e.target.checked; onFiltersChanged(); });
+  document.getElementById("serverToggle").addEventListener("change", e => { state.filters.server = e.target.checked; onFiltersChanged(); });
+  document.getElementById("openSourceToggle").addEventListener("change", e => { state.filters.openSource = e.target.checked; onFiltersChanged(); });
+  ["downloadsFrom","downloadsTo","likesFrom","likesTo"].forEach(id => {
+    document.getElementById(id).addEventListener("input", e => { state.filters[id] = e.target.value; onFiltersChanged(); });
+  });
+  document.getElementById("resetFilters").addEventListener("click", () => {
+    state.filters = JSON.parse(JSON.stringify(defaultState.filters));
+    saveState();
+    syncFilterInputsFromState();
+    renderLoaderGroups(); renderTypeChips(); renderCategoryChips();
+    onFiltersChanged();
+  });
+}
+
+function syncFilterInputsFromState() {
+  document.getElementById("versionSelect").value = state.filters.version;
+  document.getElementById("clientToggle").checked = state.filters.client;
+  document.getElementById("serverToggle").checked = state.filters.server;
+  document.getElementById("openSourceToggle").checked = state.filters.openSource;
+  document.getElementById("downloadsFrom").value = state.filters.downloadsFrom;
+  document.getElementById("downloadsTo").value = state.filters.downloadsTo;
+  document.getElementById("likesFrom").value = state.filters.likesFrom;
+  document.getElementById("likesTo").value = state.filters.likesTo;
+}
+
+/* -------------------------------------------------- settings UI --- */
+function openSettings() {
+  document.getElementById("settingsDrawer").classList.add("open");
+  document.getElementById("settingsBackdrop").classList.add("open");
+  renderBlockedList();
+  syncThemeButtons();
+}
+function closeSettings() {
+  document.getElementById("settingsDrawer").classList.remove("open");
+  document.getElementById("settingsBackdrop").classList.remove("open");
+}
+function syncThemeButtons() {
+  document.querySelectorAll("[data-theme-choice]").forEach(btn => {
+    btn.classList.toggle("primary", btn.getAttribute("data-theme-choice") === state.theme);
+  });
+}
+function renderLangSelect() {
+  const sel = document.getElementById("langSelect");
+  sel.innerHTML = "";
+  LANGS.forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l.code; opt.textContent = l.name;
+    if (l.code === state.language) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function renderBlockedList() {
+  const wrap = document.getElementById("blockedList");
+  const empty = document.getElementById("blockedEmptyNote");
+  wrap.innerHTML = "";
+  if (!state.blocked.length) { empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  state.blocked.forEach(b => {
+    const row = document.createElement("div");
+    row.className = "blocked-item";
+    const iconHtml = b.iconUrl
+      ? '<img class="blocked-icon" src="' + escapeAttr(b.iconUrl) + '" alt="">'
+      : '<div class="blocked-icon placeholder">📦</div>';
+    const url = "https://modrinth.com/" + (b.projectType || "mod") + "/" + b.slug;
+    row.innerHTML = iconHtml + '<a href="' + escapeAttr(url) + '" target="_blank" rel="noopener">' + escapeHtml(b.title) + '</a>';
+    const btn = document.createElement("button");
+    btn.textContent = "✕";
+    btn.addEventListener("click", () => {
+      state.blocked = state.blocked.filter(x => x.id !== b.id);
+      saveState(); renderBlockedList(); showToast(t("modRemoved"));
+    });
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+}
+
+function addBlockedMod(entry, silent) {
+  if (state.blocked.some(b => b.id === entry.id)) {
+    if (!silent) showToast(t("modAlreadyBlocked"));
+    return;
+  }
+  state.blocked.push(entry);
+  saveState();
+  renderBlockedList();
+  if (!silent) showToast(t("modAdded"));
+}
+
+async function handleAddModByName() {
+  const input = document.getElementById("addModInput");
+  const name = input.value.trim();
+  if (!name) return;
+  const btn = document.getElementById("addModBtn");
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = t("searching");
+  try {
+    const qs = new URLSearchParams({ query: name, limit: "1" });
+    const data = await apiGet("/search?" + qs.toString());
+    const hit = data.hits && data.hits[0];
+    if (!hit) showToast(t("modNotFound"));
+    else {
+      addBlockedMod({ id: hit.project_id, slug: hit.slug, title: hit.title, iconUrl: hit.icon_url, projectType: hit.project_type });
+      input.value = "";
+    }
+  } catch (e) { showToast(t("errorText")); }
+  finally { btn.disabled = false; btn.textContent = origText; }
+}
+
+/* ---------------------------------------------------- bootstrap --- */
+async function loadTags() {
+  const [categories, versions] = await Promise.all([
+    apiGet("/tag/category").catch(() => []),
+    apiGet("/tag/game_version").catch(() => [])
+  ]);
+  categoriesData = categories;
+  versionsData = versions;
+}
+
+function bindStaticUI() {
+  document.getElementById("settingsBtn").addEventListener("click", openSettings);
+  document.getElementById("closeSettings").addEventListener("click", closeSettings);
+  document.getElementById("settingsBackdrop").addEventListener("click", closeSettings);
+
+  document.querySelectorAll("[data-theme-choice]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.theme = btn.getAttribute("data-theme-choice");
+      saveState(); applyTheme(); syncThemeButtons();
+    });
+  });
+
+  document.getElementById("langSelect").addEventListener("change", e => {
+    state.language = e.target.value;
+    saveState(); applyTranslations(); renderVersionSelect(); renderLoaderGroups();
+  });
+
+  document.getElementById("addModBtn").addEventListener("click", handleAddModByName);
+  document.getElementById("addModInput").addEventListener("keydown", e => { if (e.key === "Enter") handleAddModByName(); });
+
+  document.getElementById("autoBlockToggle").addEventListener("change", e => { state.autoBlock = e.target.checked; saveState(); });
+
+  document.getElementById("clearBlockedBtn").addEventListener("click", () => document.getElementById("confirmBox").classList.add("open"));
+  document.getElementById("confirmCancel").addEventListener("click", () => document.getElementById("confirmBox").classList.remove("open"));
+  document.getElementById("confirmYes").addEventListener("click", () => {
+    state.blocked = [];
+    saveState(); renderBlockedList();
+    document.getElementById("confirmBox").classList.remove("open");
+    showToast(t("clearedAll"));
+  });
+
+  document.getElementById("spinBtn").addEventListener("click", doSpin);
+}
+
+async function init() {
+  applyTheme();
+  document.getElementById("autoBlockToggle").checked = state.autoBlock;
+  renderLangSelect();
+  bindStaticUI();
+  bindFilterInputs();
+  applyTranslations();
+  renderLoaderGroups();
+
+  try { await loadTags(); } catch (e) {}
+
+  renderTypeChips();
+  renderCategoryChips();
+  renderVersionSelect();
+  syncFilterInputsFromState();
+  applyTranslations();
+
+  await showInitialRandomMod();
+  document.getElementById("spinBtn").disabled = spinCandidates.length === 0 || !preloadedFinalMod;
+}
+
+init();
+})();
+</script>
+</body>
+</html>
